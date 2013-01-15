@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "Particle.h"
 #include <vector>
 
@@ -6,19 +5,19 @@ class Tracker
 {
 public:
 
-	void Initialise(int reserve);
+	void initialise(int reserve);
 
-	int AddParticle(sf::Vector2f location, sf::Vector2f velocity, float mass);
+	int addParticle(sf::Vector2f location, sf::Vector2f velocity, float mass);
 
-	void GenerateProtoDisk(float mass, sf::Vector2f location);
+	void generateProtoDisk(float mass, sf::Vector2f location);
 
-	void FreeParticle(int id);
+	void freeParticle(int id);
 
-	void FreeAll();
+	void freeAll();
 
-	Particle& GetParticle(int id);
+	Particle& getParticle(int id);
 
-	void IterateParticles(float timeFactor, sf::RenderWindow& renderWindow);
+	void iterateParticles(float timeFactor, sf::RenderWindow& renderWindow);
 
 	std::vector<Particle> m_Particles;
 

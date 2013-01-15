@@ -1,29 +1,27 @@
-#include "stdafx.h"
 #include "SFML\System\Clock.hpp"
 #include "Time.h"
 
-int Time::fpsCap = 120;
-
-float Time::GetTimeSinceLastFrame()
+float Time::getTimeSinceLastFrame()
 {
-	sf::Time time;
-	time = frameTime.GetElapsedTime();
-	return (time.AsSeconds());
+	return (frameTime.getElapsedTime().asSeconds());
 }
 
-void Time::ResetFrameTime()
+int Time::getFps()
 {
-	frameTime.Restart();
+	return (1/getTimeSinceLastFrame());
 }
 
-float Time::GetTimerTime()
+void Time::resetFrameTime()
 {
-	sf::Time time;
-	time = timerTime.GetElapsedTime();
-	return (time.AsSeconds());
+	frameTime.restart();
 }
 
-void Time::ResetTimerTime()
+float Time::getTimerTime()
 {
-	timerTime.Restart();
+	return (timerTime.getElapsedTime().asSeconds());
+}
+
+void Time::resetTimerTime()
+{
+	timerTime.restart();
 }

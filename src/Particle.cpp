@@ -1,156 +1,130 @@
-#include "stdafx.h"
 #include "Particle.h"
 #include <math.h>
 #include <iostream>
 
+//Some varivle initialization
 float Particle::gConstant = 1.0;
-float Particle::aConstant = 1.0;
+float Particle::vConstant = 500;
 
 bool m_active = false;
 int id = -1;
 float radius =0;
 
-void Particle::UpdateGeneral(float timeFactor) // timeFactor is the amount of time, in secounds, since the last frame update
+// timeFactor is the amount of time, in secounds, since the last frame update
+void Particle::updatePosition(float timeFactor) 
 	{
 		if (m_active == true)
 		{
-			//update velocity
-			velocity += (acceleration * timeFactor);
-			//velocityX += (accelerationX * timeFactor);
-			//velocityY += (accelerationY * timeFactor);
-			
-			//update location
-			location += (velocity * aConstant);
-			acceleration.x = 0;
-			acceleration.y = 0;
-			//locationX += (velocityX * aConstant);
-			//locationY += (velocityY * aConstant);
+			particleVelocity += (particleAcceleration * timeFactor);
+			particleLocation += (particleVelocity / vConstant);
+			particleAcceleration.x = 0;
+			particleAcceleration.y = 0;
+
 		}
-			
-			//std::cout<<id<<" particle is at "<<locationX<<", "<<locationY<<"\n";
 	}
 
-void Particle::AccelerationFromLinearField(float fieldStrengthX, float fieldStrengthY)
-	{
-			//accelerationX -= (fieldStrengthX);
-			//accelerationY -= (fieldStrengthY);
-	}
-
-void Particle::AccelerationFromRadialField(sf::Vector2f fieldLocation, float fieldMass)
+void Particle::accelerationFromRadialField(sf::Vector2f fieldLocation, float fieldMass)
 	{
 			//find distance away from field orign
 			sf::Vector2f delta;
-			delta.x = fieldLocation.x - location.x;
-			delta.y = fieldLocation.y - location.y;
+			delta.x = fieldLocation.x - particleLocation.x;
+			delta.y = fieldLocation.y - particleLocation.y;
+
 			float distance;
 			distance = ((delta).x)*((delta).x) + ((delta).y)*((delta).y);
-
-			//float distanceX = locationFieldX-locationX;
-			//float distanceY = locationFieldY-locationY;
+			
+			//find direction of field orign
 			float heading;
-
-			//distance = sqrt((distanceY)*(distanceY) + (distanceX)*(distanceX));
 			heading = atan2((delta).y, (delta).x);
 
-			//apply acceleration
+			//apply particleAcceleration
 			float totalAcceleration;
 			totalAcceleration = gConstant * (fieldMass) / (distance);
 			
-			acceleration.x += (cos(heading) * totalAcceleration);
-			acceleration.y += (sin(heading) * totalAcceleration);
-
-			//std::cout<<id<<" particle is being accelerated by "<<totalAcceleration<<"\n";
-			//std::cout<<id<<" at heading "<<heading<<"\n";
+			particleAcceleration.x += (cos(heading) * totalAcceleration);
+			particleAcceleration.y += (sin(heading) * totalAcceleration);
 	}
 
-void Particle::AccelerationFromUniversalField(float fieldStrengthX, float fieldStrengthY) // this seems repeditive but allows use to make a general field without having to test for collisions with a field
+void Particle::load(sf::Vector2f inputLocation, float inputMass, int idIN, sf::Vector2f inputVelocity)
 	{
-			//accelerationX -= (fieldStrengthX);
-			//accelerationY -= (fieldStrengthY);
-	}
-
-void Particle::Load(sf::Vector2f inputLocation, float inputMass, int idIN, sf::Vector2f inputVelocity)
-	{
-		location = inputLocation;
-		float thousand = 500;
-		velocity.x = (inputVelocity.x/thousand);
-		velocity.y = (inputVelocity.y/thousand);
-		acceleration.x = 0;
-		acceleration.y = 0;
-		mass = inputMass;
-		m_active = true;
+		particleLocation = inputLocation;
+		
+		particleVelocity.x = inputVelocity.x;
+		particleVelocity.y = inputVelocity.y;
+		particleAcceleration.x = 0;
+		particleAcceleration.y = 0;
+		particleMass = inputMass;
+		isActive= true;
 		id = idIN;
-		radius = (log(mass))/2;
 		_isMarked = false;
-		//std::cout<<"Particle loaded at "<<location.x<<", "<<location.y<<"\n";
-	}
-void Particle::Merge(sf::Vector2f inputVelocity, float inputMass)
+
+		radius = log(abs(particleMass))/2;
+}
+void Particle::mergeParticle(sf::Vector2f inputVelocity, float inputMass)
 {
-	mass += inputMass;
-	//velocity.x += inputVelocity.x/mass;
-	//velocity.y += inputVelocity.y/mass;
+	particleMass += inputMass;
+	particleVelocity.x += inputVelocity.x/particleMass;
+	particleVelocity.y += inputVelocity.y/particleMass;
 }
 
-void Particle::Destroy()
+void Particle::destroyParticle()
 	{
+		//remove all details
 		_isLoaded = false;
-		velocity.x = 0;
-		velocity.y = 0;
-		acceleration.x = 0;
-		acceleration.y = 0;
+		particleVelocity.x = 0;
+		particleVelocity.y = 0;
+		particleAcceleration.x = 0;
+		particleAcceleration.y = 0;
 		m_active = false;
 		radius = 0;
 		_isMarked = false;
 	}
 
-void Particle::Draw(sf::RenderWindow& renderWindow)
+void Particle::drawParticle(sf::RenderWindow& renderWindow)
 	{
 			if(m_active = true)
 			{	
-				bool negative = false;
-				sf::CircleShape Circle;
-				if (mass < 0)
-				{
-					negative = true;
-				}
-				radius = (log(abs(mass)))/2;
-				Circle.SetPosition(location.x, location.y);
-				Circle.SetRadius(radius);
-				if (negative == true)
-					Circle.SetFillColor(sf::Color(0, 0, 255, 255));
+				radius = (log(abs(particleMass)))/2;
+
+				sf::CircleShape circle;
+				circle.setPosition(particleLocation.x, particleLocation.y);
+				circle.setRadius(radius);
+
+				if (particleMass < 0)
+					circle.setFillColor(sf::Color(0, 0, 255, 255));
 				else
-					Circle.SetFillColor(sf::Color(255, 0, 0, 255));
-				renderWindow.Draw(Circle);
+					circle.setFillColor(sf::Color(255, 0, 0, 255));
+				renderWindow.draw(circle);
 			}
 	}
 
-sf::Vector2f Particle::ReturnLocation()
+sf::Vector2f Particle::returnLocation()
 {
-	return location;
+	return particleLocation;
 }
 
-sf::Vector2f Particle::ReturnVelocity()
+sf::Vector2f Particle::returnVelocity()
 {
-	return velocity;
+	return particleVelocity;
 }
 
 
-float Particle::ReturnMass()
+float Particle::returnMass()
 {
-	return mass;
+	return particleMass;
 }
 
-int Particle::ReturnId()
+int Particle::returnId()
 {
-	return id;
+	return particleId;
 }
 
-bool Particle::ReturnMark()
+bool Particle::returnMark()
 {
 	return _isMarked;
 }
 
-void Particle::Mark()
+void Particle::mark()
 {
 	_isMarked = !_isMarked;
 }

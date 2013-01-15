@@ -1,43 +1,62 @@
-#ifndef CLASS_H_
-#define CLASS_H_
+#pragma once
 
-#include "stdafx.h"
 #include "SFML\Graphics.hpp"
+///////////////////////////////////////////////////
+//  Particle Class:
+//  General class for all indevidual particles (planets)
+//  Functions include:
 
+//		-accelerationFromRadialField(...)
+//			-Called for each particle against all other particles, each frame. 
+//			-Calculates and adds up the gravitational acceleration from each.
+//		-load(...)
+//			-Initializes the particles starting varibles (particle objects might 
+//			  be reused so the construtor is not always avaible)
+//			-Called on particle start
+//		-mergeParticle(...)
+//			-Adds mass and velocity from a destroyed particle to this object
+//			-Called when two particles hit each other
+//		-destroyParticle();
+//			-Puts particle into inacivity
+//			-May be replaced at any time
+//		-mark()
+//			-Toggles a bool marking the particle for dystruction on next frame
+//			-Called when particle collides with anouther
+//			-Particles can't be destroyed immediatly otherwise they'll disapear and 
+//			  move before all other particles can be affected by it
+//
+//  Other values and funtions are self-explanitory
+///////////////////////////////////////////////////
 class Particle
 {
 public:
-	bool m_active;
+	bool isActive;
 
 	float radius;
 
-	void UpdateGeneral(float timeFactor); // timeFactor is the amount of time, in secounds, since the last update
+	void updatePosition(float timeFactor);
 
-	void AccelerationFromLinearField(float fieldStrengthX, float fieldStrengthY); // not affected by distance
+	void accelerationFromRadialField(sf::Vector2f fieldLocation, float fieldMass); // circular, affected by distance
 
-	void AccelerationFromRadialField(sf::Vector2f fieldLocation, float fieldMass); // circular, affected by distance
-
-	void AccelerationFromUniversalField(float fieldStrengthX, float fieldStrengthY); // gravity etc...
+	void load(sf::Vector2f location, float mass, int id, sf::Vector2f velocity);
 	
-	void Load(sf::Vector2f location, float mass, int id, sf::Vector2f velocity);
+	void mergeParticle(sf::Vector2f velocity, float mass);
+
+	void destroyParticle();
+
+	void drawParticle(sf::RenderWindow& renderWindow);
+
+	sf::Vector2f returnLocation();
 	
-	void Merge(sf::Vector2f velocity, float mass);
+	sf::Vector2f returnVelocity();
 
-	void Destroy();
+	float returnMass();
 
-	void Draw(sf::RenderWindow& renderWindow);
+	int returnId();
 
-	sf::Vector2f ReturnLocation();
-	
-	sf::Vector2f ReturnVelocity();
+	bool returnMark();
 
-	float ReturnMass();
-
-	int ReturnId();
-
-	bool ReturnMark();
-
-	void Mark();
+	void mark();
 
 private:
 	//graphics stuff
@@ -45,21 +64,20 @@ private:
 
 	bool _isLoaded;
 
-	bool _isMarked; //to mark for dystruction
+	bool _isMarked;
 
 	//physics stuff
-	float mass;
+	float particleMass;
 	
-	int id;
+	int particleId;
 
-	sf::Vector2f location;
+	sf::Vector2f particleLocation;
 
-	sf::Vector2f velocity;
+	sf::Vector2f particleVelocity;
 
-	sf::Vector2f acceleration;
+	sf::Vector2f particleAcceleration;
 
 	static float gConstant;
 
-	static float aConstant; // the universal constant to ajust speed to an easy to use scale
+	static float vConstant; //universal constant that adjust velocity to be more managable
 };
-#endif

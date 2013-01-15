@@ -1,18 +1,17 @@
-#include "stdafx.h"
 #include "Tracker.h"
 #include <iostream>
 
 //std::vector<Particle> m_Particles;
 //std::vector<int> m_freeParticles;
 
-void Tracker::Initialise(int reserve)
+void Tracker::initialise(int reserve)
 {
 	Pause = false;
 	m_Particles.reserve(reserve);
 	m_freeParticles.reserve(reserve);
 }
 
-int Tracker::AddParticle(sf::Vector2f location, sf::Vector2f velocity, float mass)
+int Tracker::addParticle(sf::Vector2f location, sf::Vector2f velocity, float mass)
 {
 	int id = -1;
 
@@ -28,91 +27,82 @@ int Tracker::AddParticle(sf::Vector2f location, sf::Vector2f velocity, float mas
 		m_Particles.push_back(newParticle);//add new bullet
 	}
 
-	m_Particles[id].Load(location, mass, id, velocity);
-	std::cout<<id<<" Loaded\n";
+	m_Particles[id].load(location, mass, id, velocity);
 	return id;
 }
 
-void Tracker::GenerateProtoDisk(float mass, sf::Vector2f inputLocation)
+void Tracker::generateProtoDisk(float mass, sf::Vector2f inputLocation)
 {
-	int i;
-	for (i = 0; i < 50; i++)
+	sf::Vector2f orgin = inputLocation;
+
+	for (int i = 0; i < 50; i++)
 	{
-		sf::Vector2f location;
-		location = inputLocation;
-		location.x += std::rand() % 100;
-		location.y += std::rand() % 100;
-		sf::Vector2f velocity;
-		velocity.x = 0;
-		velocity.y = 0;
-		AddParticle(location, velocity, mass);
+		float distance = std::rand() % 100;
+		float heading = std::rand() % 7; //random direction
+
+		sf::Vector2f location((cos(heading) * distance), (sin(heading) * distance));
+		sf::Vector2f velocity(0.0f, 0.0f);
+		addParticle(location, velocity, mass);
 	}
 }
 
-void Tracker::FreeParticle(int id)
+void Tracker::freeParticle(int id)
 {
-	m_Particles[id].Destroy(); //kill the bullet
+	m_Particles[id].destroyParticle(); //kill the bullet
 	m_freeParticles.push_back(id);//add it to free bullet list
-	std::cout<<id<<" Destroyed\n";
 }
 
-void Tracker::FreeAll()
+void Tracker::freeAll()
 {
-	int count = 0;
 	std::vector<Particle>::iterator j;
 	for (j = m_Particles.begin(); j != m_Particles.end(); j++)
 	{
-		FreeParticle(j->ReturnId());
-		count++;
+		freeParticle(j->returnId());
 	}
-	std::cout<<count<<" particles cleared.\n";
 }
 
-Particle& Tracker::GetParticle(int id)
+Particle& Tracker::getParticle(int id)
 {
 	return m_Particles[id];
 }
 
-void Tracker::IterateParticles(float timeFactor, sf::RenderWindow& renderWindow)
+void Tracker::iterateParticles(float timeFactor, sf::RenderWindow& renderWindow)
 {
 	std::vector<Particle>::iterator i;
 	for (i = m_Particles.begin(); i != m_Particles.end(); i++)
 	{
-		if ((i->m_active) == true && Pause == false)
+		if ((i->isActive) == true && Pause == false)
 		{
-			//i->AccelerationFromLinearField(0,0);
-			//i->AccelerationFromUniversalField(0,0);
-			i->UpdateGeneral(timeFactor);
-			i->Draw(renderWindow);
-			if (i->ReturnMark() == true)
+			
+			i->updatePosition(timeFactor);
+			i->drawParticle(renderWindow);
+
+			if (i->returnMark() == true)
 			{
-				FreeParticle(i->ReturnId());
+				freeParticle(i->returnId());
 			}
 
 			else
 			{
-				//sub-iterator for affecting each other
+				//sub-iterator for two particles affecting each other
 				std::vector<Particle>::iterator j;
 				for (j = m_Particles.begin(); j != m_Particles.end(); j++)
 				{
-					if (j->ReturnId() != i->ReturnId() && (j->m_active) == true)
+					if (j->returnId() != i->returnId() && j->isActive)
 					{
-						i->AccelerationFromRadialField(j->ReturnLocation(), (j->ReturnMass()));
+						//gravity between two particles
+						i->accelerationFromRadialField(j->returnLocation(), (j->returnMass()));
 
+						//Collision detection, finds distance between particles and mark() and murge() is applid to those who are too close
 						long double distanceX, distanceY;
-						distanceX = ((i->ReturnLocation()).x - (j->ReturnLocation()).x);
-						distanceY = ((i->ReturnLocation()).y - (j->ReturnLocation()).y);
-						if (((abs(distanceX) < i->radius) == true) && ((abs(distanceY) < i->radius) == true))
+						distanceX = ((i->returnLocation()).x - (j->returnLocation()).x);
+						distanceY = ((i->returnLocation()).y - (j->returnLocation()).y);
+
+						if ((abs(distanceX) < i->radius) && (abs(distanceY) < i->radius))
 						{
-							float mass;
-							mass = j->ReturnMass();
-							i->Merge(j->ReturnVelocity(), mass);
-							int id;
-							id = (j->ReturnId());
-							std::cout<<id<<" Collided with "<<i->ReturnId()<<"\n";
-							j->Mark();
+							i->mergeParticle(j->returnVelocity(), j->returnMass());
+							j->mark();
 						}
-						//std::cout<<i->id<<" was accelerated by "<<j->id<<"\n";
 					}
 				}
 			}

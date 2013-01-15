@@ -1,112 +1,131 @@
-#include "stdafx.h"
 #include "Game.h"
 #include <iostream>
 
-void Game::Start()
+Game::GameState Game::currGameState = Uninitalized;
+sf::RenderWindow Game::mainWindow;
+Time Game::time;
+sf::Vector2f Game::initMouseInput;
+Tracker Game::particleTracker;
+int Game::currMassSetting;
+int Game::halfScreenX = 512;
+int Game::halfScreenY = 400;
+
+/*
+	Game Initalization
+	-Sets up varibles
+*/
+
+void Game::start()
 {
-	if (_gameState != Uninitalized)
+	if (currGameState != Uninitalized)
 		return;
-	sf::View view;
-	view.SetSize((800), (600));
-	view.SetCenter(400, 300);
-	_mainWindow.Create(sf::VideoMode((800), (600), 32), "Particles", sf::Style::Default);
-	_mainWindow.SetView(view);
-	_initInput.x = 0;
-	_initInput.y = 0;
 
-	_gameState = Game::Playing;
-	_tracker.Initialise(500);
-	_massSetting = 10;
+	mainWindow.create(sf::VideoMode((800), (600), 32), "Particles", sf::Style::Default);
 
-	while (!IsExiting())
-		GameLoop();
+	initMouseInput.x = 0;
+	initMouseInput.y = 0;
 
-	_mainWindow.Close();
+	currGameState = Game::Playing;
+	particleTracker.initialise(2);
+	currMassSetting = 10;
+
+	while (!isExiting())
+		gameLoop();
+
+	mainWindow.close();
 }
 
-bool Game::IsExiting()
+bool Game::isExiting()
 {
-	if (_gameState == Game::Exiting)
+	if (currGameState == Game::Exiting)
 		return true;
 	else 
 		return false;
 }
 
-void Game::GameLoop()
+void Game::gameLoop()
 {
 	sf::Event currentEvent;
-	_mainWindow.PollEvent(currentEvent);
-		switch (_gameState)
+	mainWindow.pollEvent(currentEvent);
+		switch (currGameState)
 		{
 			case Game::Playing:
 			{
 			
-			_mainWindow.Clear(sf::Color(0, 0, 0));
-			float timeFactor = _time.GetTimeSinceLastFrame();
+			mainWindow.clear(sf::Color(0, 0, 0));
+			
+			float timeFactor = time.getTimeSinceLastFrame();
 
-			_tracker.IterateParticles(timeFactor, _mainWindow);
+			particleTracker.iterateParticles(timeFactor, mainWindow);
 
-			_mainWindow.Display();
-			//std::cout<< _time.GetTimeSinceLastFrame() << "\n";
-			_time.ResetFrameTime();
-			if (currentEvent.Type == sf::Event::Closed)
-				_gameState = Game::Exiting;
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Escape))
-				_gameState = Game::Exiting;
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Num1))
-				_massSetting = 10;
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Num2))
-				_massSetting = 100;
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Num3))
-				_massSetting = 1000;
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Num4))
-				_massSetting = -100000;
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Num5))
-				_massSetting = 100000;
-			if ((currentEvent.Type == sf::Event::MouseButtonPressed) && (currentEvent.MouseButton.Button == sf::Mouse::Left))
+			mainWindow.display();
+			
+			time.resetFrameTime();
+
+			//Accepting user input
+			//shut down when [x] button pressed
+			if (currentEvent.type == sf::Event::Closed)
+				currGameState = Game::Exiting;
+
+			//exit on pressing escape
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Escape))
+				currGameState = Game::Exiting;
+
+			//change mass for future particles by pressing number keys
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num1))
+				currMassSetting = 10;
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num2))
+				currMassSetting = 100;
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num3))
+				currMassSetting = 1000;
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num4))
+				currMassSetting = 10000;
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num5))
+				currMassSetting = 100000;
+			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num6))
+				currMassSetting = 1000000;
+			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num7))
+				currMassSetting = 10000000;
+			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num8))
+				currMassSetting = 100000000;
+			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num9))
+				currMassSetting = 1000000000;
+			//toggle negative mass setting
+			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Subtract))
+				currMassSetting *= -1;
+			
+			//capture inital mouse click for spawning particles
+			if ((currentEvent.type == sf::Event::MouseButtonPressed) && (currentEvent.mouseButton.button == sf::Mouse::Left))
 			{
 				const sf::Mouse mouse;
-
-				_initInput.x = (mouse.GetPosition(_mainWindow).x);
-				_initInput.y = (mouse.GetPosition(_mainWindow).y);
-				std::cout<<_initInput.x<<", "<<_initInput.y<<"\n";
+				initMouseInput.x = (mouse.getPosition(mainWindow).x);
+				initMouseInput.y = (mouse.getPosition(mainWindow).y);
 			}
-			if ((currentEvent.Type == sf::Event::MouseButtonReleased) && (currentEvent.MouseButton.Button == sf::Mouse::Left))
+			//capture mouse button release and calcualte velocy for new particle
+			if ((currentEvent.type == sf::Event::MouseButtonReleased) && (currentEvent.mouseButton.button == sf::Mouse::Left))
 			{
 				const sf::Mouse mouse;
-				sf::Vector2i _input;
-				_input = (mouse.GetPosition(_mainWindow));
+				sf::Vector2i releaseMouseInput = (mouse.getPosition(mainWindow));
+				sf::Vector2f velocity((initMouseInput.x - releaseMouseInput.x), (initMouseInput.y - releaseMouseInput.y));
 
-				sf::Vector2f _velocity;
-				_velocity.x = (_initInput.x - _input.x);
-				_velocity.y = (_initInput.y - _input.y);
-
-				std::cout<<_input.x<<", "<<_input.y<<"\n";
-				std::cout<<_velocity.x<<", "<<_velocity.y<<"\n";
-
-				_tracker.AddParticle(_initInput, _velocity, _massSetting);
+				particleTracker.addParticle(initMouseInput, velocity, currMassSetting);
 			}
-			if ((currentEvent.Type == sf::Event::KeyPressed) && (currentEvent.Key.Code == sf::Keyboard::Space))
-				_tracker.FreeAll();
-			if ((currentEvent.Type == sf::Event::MouseButtonPressed) && (currentEvent.MouseButton.Button == sf::Mouse::Right))
+
+			//destoys all particles when delete is pressed
+			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Delete))
+				particleTracker.freeAll();
+
+			//generates a disk of particles on right click
+			if ((currentEvent.type == sf::Event::MouseButtonPressed) && (currentEvent.mouseButton.button == sf::Mouse::Right))
 			{
 				const sf::Mouse mouse;
-				sf::Vector2f _input;
-				_input.x = (mouse.GetPosition(_mainWindow).x);
-				_input.y = (mouse.GetPosition(_mainWindow).y);
-				_tracker.GenerateProtoDisk(_massSetting, _input);
+				sf::Vector2f position;
+				position.x = (mouse.getPosition(mainWindow).x);
+				position.y = (mouse.getPosition(mainWindow).y);
+				particleTracker.generateProtoDisk(currMassSetting, position);
 			}
 			
 			break;
 		}
 	}
 }
-
-Game::GameState Game::_gameState = Uninitalized;
-sf::RenderWindow Game::_mainWindow;
-Time Game::_time;
-sf::Vector2f Game::_initInput;
-Tracker Game::_tracker;
-int Game::_massSetting;
-int Game::halfScreenX = 512;
-int Game::halfScreenY = 400;

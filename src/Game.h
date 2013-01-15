@@ -8,23 +8,23 @@
 class Game
 {
 public:
-	static void Start();
+	static void start();
 	
 
 private:
-	static bool IsExiting();
-	static void GameLoop();
+	static bool isExiting();
+	static void gameLoop();
 
 	enum GameState { Uninitalized, ShowingSplash, Paused, ShowingMenu, Playing, Exiting };
 
-	static GameState _gameState;
-	static sf::RenderWindow _mainWindow;
+	static GameState currGameState;
+	static sf::RenderWindow mainWindow;
 	
-	static Time _time;
-	static sf::Vector2f _initInput;
+	static Time time;
+	static sf::Vector2f initMouseInput;
 
-	static Tracker _tracker;
-	static int _massSetting;
+	static Tracker particleTracker;
+	static int currMassSetting;
 	static int halfScreenX;
 	static int halfScreenY;
 	
