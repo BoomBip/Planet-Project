@@ -4,22 +4,17 @@
 
 //Some varivle initialization
 float Particle::gConstant = 1.0;
-float Particle::vConstant = 500;
-
-bool m_active = false;
-int id = -1;
-float radius =0;
+float Particle::vConstant = 100;
 
 // timeFactor is the amount of time, in secounds, since the last frame update
 void Particle::updatePosition(float timeFactor) 
 	{
-		if (m_active == true)
+		if (isActive == true)
 		{
 			particleVelocity += (particleAcceleration * timeFactor);
-			particleLocation += (particleVelocity / vConstant);
+			particleLocation -= (particleVelocity / vConstant);
 			particleAcceleration.x = 0;
 			particleAcceleration.y = 0;
-
 		}
 	}
 
@@ -27,35 +22,32 @@ void Particle::accelerationFromRadialField(sf::Vector2f fieldLocation, float fie
 	{
 			//find distance away from field orign
 			sf::Vector2f delta;
-			delta.x = fieldLocation.x - particleLocation.x;
-			delta.y = fieldLocation.y - particleLocation.y;
+			delta = particleLocation - fieldLocation;
 
-			float distance;
-			distance = ((delta).x)*((delta).x) + ((delta).y)*((delta).y);
+			float distanceSquare;
+			distanceSquare = ((delta.x)*(delta.x) + (delta.y)*(delta.y));
 			
 			//find direction of field orign
 			float heading;
-			heading = atan2((delta).y, (delta).x);
+			heading = atan2(delta.x, delta.y);
 
 			//apply particleAcceleration
 			float totalAcceleration;
-			totalAcceleration = gConstant * (fieldMass) / (distance);
+			totalAcceleration = gConstant * fieldMass / distanceSquare;
 			
-			particleAcceleration.x += (cos(heading) * totalAcceleration);
-			particleAcceleration.y += (sin(heading) * totalAcceleration);
+			particleAcceleration += (totalAcceleration * delta);
 	}
 
 void Particle::load(sf::Vector2f inputLocation, float inputMass, int idIN, sf::Vector2f inputVelocity)
 	{
 		particleLocation = inputLocation;
-		
-		particleVelocity.x = inputVelocity.x;
-		particleVelocity.y = inputVelocity.y;
+		particleVelocity = inputVelocity;
+
 		particleAcceleration.x = 0;
 		particleAcceleration.y = 0;
 		particleMass = inputMass;
 		isActive= true;
-		id = idIN;
+		particleId = idIN;
 		_isMarked = false;
 
 		radius = log(abs(particleMass))/2;
@@ -75,18 +67,17 @@ void Particle::destroyParticle()
 		particleVelocity.y = 0;
 		particleAcceleration.x = 0;
 		particleAcceleration.y = 0;
-		m_active = false;
+		isActive = false;
 		radius = 0;
 		_isMarked = false;
 	}
 
 void Particle::drawParticle(sf::RenderWindow& renderWindow)
 	{
-			if(m_active = true)
+			if(isActive = true)
 			{	
 				radius = (log(abs(particleMass)))/2;
 
-				sf::CircleShape circle;
 				circle.setPosition(particleLocation.x, particleLocation.y);
 				circle.setRadius(radius);
 
@@ -94,6 +85,7 @@ void Particle::drawParticle(sf::RenderWindow& renderWindow)
 					circle.setFillColor(sf::Color(0, 0, 255, 255));
 				else
 					circle.setFillColor(sf::Color(255, 0, 0, 255));
+
 				renderWindow.draw(circle);
 			}
 	}

@@ -26,7 +26,7 @@ void Game::start()
 	initMouseInput.y = 0;
 
 	currGameState = Game::Playing;
-	particleTracker.initialise(2);
+	particleTracker.initialise(500);
 	currMassSetting = 10;
 
 	while (!isExiting())

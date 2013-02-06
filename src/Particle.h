@@ -77,6 +77,8 @@ private:
 
 	sf::Vector2f particleAcceleration;
 
+	sf::CircleShape circle;
+
 	static float gConstant;
 
 	static float vConstant; //universal constant that adjust velocity to be more managable
