@@ -1,38 +1,58 @@
 #include "Tracker.h"
 #include <iostream>
 
-//std::vector<Particle> m_Particles;
-//std::vector<int> m_freeParticles;
 
-void Tracker::initialise(int reserve)
-{
-	Pause = false;
-	m_Particles.reserve(reserve);
-	m_freeParticles.reserve(reserve);
+Tracker* Tracker::instance = 0;
+std::vector<Particle*> Tracker::_particles;
+std::vector<int> Tracker::_freeIds;
+
+Tracker::Tracker(const Tracker& t){}
+void Tracker::operator=(const Tracker& t){}
+Tracker::~Tracker(){}
+
+Tracker::Tracker(int initCap){
+	_particles.reserve(initCap);
+	_freeIds.reserve(initCap);
+	_paused = false;
 }
 
-int Tracker::addParticle(sf::Vector2f location, sf::Vector2f velocity, float mass)
-{
-	int id = -1;
-
-	if(m_freeParticles.size() > 0)//if there are any bullets existing
-	{
-		id = m_freeParticles.back(); //get the id of the last free bullet location
-		m_freeParticles.pop_back(); //delete the last free bullet
-	}
-	else
-	{
-		id = m_Particles.size(); //id equals amount of bullets existing (+1)
-		Particle newParticle;
-		m_Particles.push_back(newParticle);//add new bullet
+Tracker* Tracker::create(int initCap){
+	if(!instance){
+		instance = new Tracker(initCap);
+		atexit(cleanup);
 	}
 
-	m_Particles[id].load(location, mass, id, velocity);
+	return instance;
+}
+
+int Tracker::addParticle(sf::Vector2f location, sf::Vector2f velocity, float mass){
+	int id = getFreeId();
+	if(id < 0){
+		if(_particles.size() + 1 >= _particles.capacity()){
+			int newCap = (2*_particles.size() > _particles.max_size())? _particles.max_size(): 2*_particles.size();
+			_particles.reserve(newCap);
+		}
+		Particle* particle = new Particle(_particles.size(), location, velocity, mass);
+		id = _particles.size();
+		_particles.push_back(particle);
+	} else {
+		_particles[id]->refactor(location, velocity, mass);
+	}
+
 	return id;
 }
 
-void Tracker::generateProtoDisk(float mass, sf::Vector2f inputLocation)
-{
+int Tracker::getFreeId(){
+	int id = -1;
+	if(!_freeIds.empty()){
+		id = _freeIds.back();
+		_freeIds.pop_back();
+	}
+
+	return id;
+}
+
+void Tracker::generateProtoDisk(float mass, sf::Vector2f inputLocation){
 	sf::Vector2f orgin = inputLocation;
 
 	for (int i = 0; i < 50; i++)
@@ -46,69 +66,71 @@ void Tracker::generateProtoDisk(float mass, sf::Vector2f inputLocation)
 	}
 }
 
-void Tracker::freeParticle(int id)
-{
-	m_Particles[id].destroyParticle(); //kill the bullet
-	m_freeParticles.push_back(id);//add it to free bullet list
+void Tracker::freeParticle(int id){
+	_particles[id]->setMark(MarkStatus::DELETED);
+	_freeIds.push_back(id);
 }
 
-void Tracker::freeAll()
-{
-	std::vector<Particle>::iterator j;
-	for (j = m_Particles.begin(); j != m_Particles.end(); j++)
-	{
-		freeParticle(j->returnId());
+void Tracker::cleanup(){
+	for(int i = 0; i < _particles.size(); i++){
+		delete _particles[i];
 	}
+	_particles.clear();
 }
 
-Particle& Tracker::getParticle(int id)
-{
-	return m_Particles[id];
-}
+void Tracker::update(sf::Time timeFactor, sf::RenderWindow& renderWindow){
 
-void Tracker::iterateParticles(float timeFactor, sf::RenderWindow& renderWindow)
-{
+	if(_paused)
+		return;
+
 	//update Postion
-	std::vector<Particle>::iterator i;
+	std::vector<Particle*>::iterator i;
+	std::vector<Particle*>::iterator j;
 
-	for (i = m_Particles.begin(); i != m_Particles.end(); i++)
-	{
-		if ((i->isActive) == true && Pause == false)
-		{
+	for (i = _particles.begin(); i != _particles.end(); i++){
+		if ((*i)->getMark() == MarkStatus::NOMARK){
 
-			i->updatePosition(timeFactor);
-			i->drawParticle(renderWindow);
+			(*i)->update(timeFactor);
 
-			if (i->returnMark() == true)
-			{
-				freeParticle(i->returnId());
-			}
+			//sub-iterator for two particles affecting each other
 
-			else
-			{
-				//sub-iterator for two particles affecting each other
-				std::vector<Particle>::iterator j;
-				for (j = m_Particles.begin(); j != m_Particles.end(); j++)
-				{
-					std::cout<<"Particle "<< j->returnId() << "\n";
-					if (j->returnId() != i->returnId() && (j->isActive) == true)
-					{
-						//gravity between two particles
-						i->accelerationFromRadialField(j->returnLocation(), j->returnMass());
-						
-						//Collision detection, finds distance between particles and mark() and merge() is applid to those who are too close
-						long double distanceX, distanceY;
-						distanceX = ((i->returnLocation()).x - (j->returnLocation()).x);
-						distanceY = ((i->returnLocation()).y - (j->returnLocation()).y);
+			for (j = _particles.begin(); j != _particles.end(); j++){
+				if ((*j)->id != (*i)->id && (*j)->getMark() == MarkStatus::NOMARK){
 
-						if ((abs(distanceX) < i->radius) && (abs(distanceY) < i->radius))
-						{
-							i->mergeParticle(j->returnVelocity(), j->returnMass());
-							freeParticle(j->returnId());
-						}
+					//gravity between two particles
+					(*i)->addAcel(*j);
+
+					//Collision detection, finds distance between particles and mark() and merge() is applid to those who are too close
+					sf::Vector2f distance = (*i)->getPos() - (*j)->getPos();
+
+					if (abs(distance.x) < ((*i)->getRadius() + (*j)->getRadius()) && (abs(distance.y) < ((*i)->getRadius() + (*j)->getRadius()))){
+						float mass = (*i)->getMass() + (*j)->getMass();
+						sf::Vector2f middle = 0.5f*distance + (*i)->getPos();
+						addParticle(middle, ((*i)->getVel() + (*j)->getVel())*0.5f, mass);
+						(*i)->setMark(MarkStatus::TOBEDELETED);
+						(*j)->setMark(MarkStatus::TOBEDELETED);
+
 					}
 				}
 			}
+		}
+	}
+
+	for (i = _particles.begin(); i != _particles.end(); i++){
+		switch((*i)->getMark()){
+		case NOMARK:
+			(*i)->advance();
+			(*i)->draw(renderWindow);
+			break;
+		case TOBEDELETED:
+			freeParticle((*i)->id);
+			break;
+		case TOBEADDED:
+			(*i)->setMark(NOMARK);
+			break;
+		case DELETED:
+			//no action
+			break;
 		}
 	}
 }

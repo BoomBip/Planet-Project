@@ -23,7 +23,7 @@ private:
 	static Time time;
 	static sf::Vector2f initMouseInput;
 
-	static Tracker particleTracker;
+	static Tracker* particleTracker;
 	static int currMassSetting;
 	static int halfScreenX;
 	static int halfScreenY;

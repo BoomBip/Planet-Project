@@ -1,27 +1,40 @@
-#include "Particle.h"
+
+#pragma once
+#include <list>
 #include <vector>
+#include "Particle.h"
 
 class Tracker
 {
 public:
 
-	void initialise(int reserve);
+	static Tracker* create(int initalCapacity);
 
 	int addParticle(sf::Vector2f location, sf::Vector2f velocity, float mass);
 
 	void generateProtoDisk(float mass, sf::Vector2f location);
 
+	bool togglePause();
+
+	void update(sf::Time timefactor, sf::RenderWindow& renderWindow);
+
+private:
+	//get rid of these
+	Tracker(int initCap);
+	Tracker(const Tracker& t);
+	void operator=(const Tracker& t);
+	~Tracker();
+
 	void freeParticle(int id);
 
-	void freeAll();
+	int getFreeId();
 
-	Particle& getParticle(int id);
+	static void cleanup();
 
-	void iterateParticles(float timeFactor, sf::RenderWindow& renderWindow);
+	static Tracker* instance;
 
-	std::vector<Particle> m_Particles;
+	static std::vector<Particle*> _particles;
+	static std::vector<int> _freeIds;
 
-	std::vector<int> m_freeParticles;
-
-	bool Pause;
+	bool _paused;
 };

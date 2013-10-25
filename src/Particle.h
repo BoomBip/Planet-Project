@@ -1,85 +1,58 @@
 #pragma once
 
 #include "SFML\Graphics.hpp"
-///////////////////////////////////////////////////
-//  Particle Class:
-//  General class for all indevidual particles (planets)
-//  Functions include:
 
-//		-accelerationFromRadialField(...)
-//			-Called for each particle against all other particles, each frame. 
-//			-Calculates and adds up the gravitational acceleration from each.
-//		-load(...)
-//			-Initializes the particles starting varibles (particle objects might 
-//			  be reused so the construtor is not always avaible)
-//			-Called on particle start
-//		-mergeParticle(...)
-//			-Adds mass and velocity from a destroyed particle to this object
-//			-Called when two particles hit each other
-//		-destroyParticle();
-//			-Puts particle into inacivity
-//			-May be replaced at any time
-//		-mark()
-//			-Toggles a bool marking the particle for dystruction on next frame
-//			-Called when particle collides with anouther
-//			-Particles can't be destroyed immediatly otherwise they'll disapear and 
-//			  move before all other particles can be affected by it
-//
-//  Other values and funtions are self-explanitory
-///////////////////////////////////////////////////
-class Particle
-{
+#define maxVelocity 100
+
+enum MarkStatus{
+	NOMARK,
+	TOBEDELETED,
+	TOBEADDED,
+	DELETED
+};
+
+class Particle {
 public:
-	bool isActive;
+
+	const int id;
+
+	Particle(int id, sf::Vector2f location, sf::Vector2f velocity, float mass);
+
+	void refactor(sf::Vector2f location, sf::Vector2f velocity, float mass);
+
+	void update(sf::Time delta);
+
+	void advance();
+
+	void addAcel(Particle* a);
+
+	void draw(sf::RenderWindow& renderWindow);
+
+	float getMass();
+
+	sf::Vector2f getPos();
+
+	float getRadius();
+
+	sf::Vector2f getVel();
+
+	MarkStatus getMark();
+
+	void setMark(MarkStatus mark);
+
+private:
+
+	MarkStatus mark;
+
+	float mass;
 
 	float radius;
 
-	void updatePosition(float timeFactor);
+	sf::Vector2f pos;
 
-	void accelerationFromRadialField(sf::Vector2f fieldLocation, float fieldMass); // circular, affected by distance
+	sf::Vector2f nPos;
 
-	void load(sf::Vector2f location, float mass, int id, sf::Vector2f velocity);
-	
-	void mergeParticle(sf::Vector2f velocity, float mass);
+	sf::Vector2f vel;
 
-	void destroyParticle();
-
-	void drawParticle(sf::RenderWindow& renderWindow);
-
-	sf::Vector2f returnLocation();
-	
-	sf::Vector2f returnVelocity();
-
-	float returnMass();
-
-	int returnId();
-
-	bool returnMark();
-
-	void mark();
-
-private:
-	//graphics stuff
-	sf::Font _font;
-
-	bool _isLoaded;
-
-	bool _isMarked;
-
-	//physics stuff
-	float particleMass;
-	
-	int particleId;
-
-	sf::Vector2f particleLocation;
-
-	sf::Vector2f particleVelocity;
-
-	sf::Vector2f particleAcceleration;
-
-	sf::CircleShape circle;
-
-	static float gConstant;
-
-	static float vConstant; //universal constant that adjust velocity to be more managable
+	sf::Vector2f acc;
 };

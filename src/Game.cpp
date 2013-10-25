@@ -5,7 +5,7 @@ Game::GameState Game::currGameState = Uninitalized;
 sf::RenderWindow Game::mainWindow;
 Time Game::time;
 sf::Vector2f Game::initMouseInput;
-Tracker Game::particleTracker;
+Tracker* Game::particleTracker = Tracker::create(100);
 int Game::currMassSetting;
 int Game::halfScreenX = 512;
 int Game::halfScreenY = 400;
@@ -26,7 +26,6 @@ void Game::start()
 	initMouseInput.y = 0;
 
 	currGameState = Game::Playing;
-	particleTracker.initialise(500);
 	currMassSetting = 10;
 
 	while (!isExiting())
@@ -56,7 +55,7 @@ void Game::gameLoop()
 			
 			float timeFactor = time.getTimeSinceLastFrame();
 
-			particleTracker.iterateParticles(timeFactor, mainWindow);
+			particleTracker->update(sf::seconds(timeFactor), mainWindow);
 
 			mainWindow.display();
 			
@@ -91,7 +90,7 @@ void Game::gameLoop()
 			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Num9))
 				currMassSetting = 1000000000;
 			//toggle negative mass setting
-			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Subtract))
+			if((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Dash))
 				currMassSetting *= -1;
 			
 			//capture inital mouse click for spawning particles
@@ -108,12 +107,12 @@ void Game::gameLoop()
 				sf::Vector2i releaseMouseInput = (mouse.getPosition(mainWindow));
 				sf::Vector2f velocity((initMouseInput.x - releaseMouseInput.x), (initMouseInput.y - releaseMouseInput.y));
 
-				particleTracker.addParticle(initMouseInput, velocity, currMassSetting);
+				particleTracker->addParticle(initMouseInput, velocity, currMassSetting);
 			}
 
 			//destoys all particles when delete is pressed
-			if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Delete))
-				particleTracker.freeAll();
+			//if ((currentEvent.type == sf::Event::KeyPressed) && (currentEvent.key.code == sf::Keyboard::Delete))
+				//particleTracker.freeAll();
 
 			//generates a disk of particles on right click
 			if ((currentEvent.type == sf::Event::MouseButtonPressed) && (currentEvent.mouseButton.button == sf::Mouse::Right))
@@ -122,7 +121,7 @@ void Game::gameLoop()
 				sf::Vector2f position;
 				position.x = (mouse.getPosition(mainWindow).x);
 				position.y = (mouse.getPosition(mainWindow).y);
-				particleTracker.generateProtoDisk(currMassSetting, position);
+				particleTracker->generateProtoDisk(currMassSetting, position);
 			}
 			
 			break;
